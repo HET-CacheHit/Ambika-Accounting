@@ -847,32 +847,163 @@ html, body {
   transition: width 0.4s ease;
 }
 
-/* Login Page Styling */
+/* Animated Moving Background Keyframes & Orbs */
+@keyframes backgroundDrift {
+  0% {
+    transform: scale(1.02) translate(0, 0);
+  }
+  50% {
+    transform: scale(1.08) translate(-20px, 15px);
+  }
+  100% {
+    transform: scale(1.02) translate(0, 0);
+  }
+}
+
+@keyframes orbFloat1 {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.55;
+  }
+  33% {
+    transform: translate(140px, -90px) scale(1.25);
+    opacity: 0.8;
+  }
+  66% {
+    transform: translate(-100px, 120px) scale(0.9);
+    opacity: 0.6;
+  }
+}
+
+@keyframes orbFloat2 {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.5;
+  }
+  33% {
+    transform: translate(-150px, 110px) scale(1.2);
+    opacity: 0.75;
+  }
+  66% {
+    transform: translate(120px, -80px) scale(0.85);
+    opacity: 0.55;
+  }
+}
+
+@keyframes orbFloat3 {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.45;
+  }
+  50% {
+    transform: translate(170px, 90px) scale(1.3);
+    opacity: 0.7;
+  }
+}
+
+@keyframes orbFloat4 {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.4;
+  }
+  50% {
+    transform: translate(-120px, -130px) scale(1.15);
+    opacity: 0.65;
+  }
+}
+
+/* Login Page Animated Moving Background */
 .login-container {
   min-height: 100vh;
+  position: relative;
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 20px;
-  background-image: 
-    radial-gradient(circle at center, rgba(59, 130, 246, 0.2), transparent 60%),
-    linear-gradient(180deg, rgba(7, 10, 18, 0.8) 0%, rgba(7, 10, 18, 0.92) 100%),
-    url('/accounting_bg.jpg');
+  background: radial-gradient(circle at 50% 50%, #0b1120 0%, #030712 100%);
+}
+
+.login-bg-wallpaper {
+  position: absolute;
+  inset: -40px;
+  background-image: url('/accounting_bg.jpg');
+  background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  background-size: cover;
+  opacity: 0.4;
+  filter: blur(3px);
+  animation: backgroundDrift 25s ease-in-out infinite alternate;
+  z-index: 0;
+}
+
+.moving-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(85px);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.moving-orb-1 {
+  width: 500px;
+  height: 500px;
+  top: 5%;
+  left: 10%;
+  background: radial-gradient(circle, rgba(37, 99, 235, 0.6) 0%, rgba(59, 130, 246, 0) 70%);
+  animation: orbFloat1 16s ease-in-out infinite;
+}
+
+.moving-orb-2 {
+  width: 550px;
+  height: 550px;
+  bottom: 5%;
+  right: 10%;
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.5) 0%, rgba(5, 150, 105, 0) 70%);
+  animation: orbFloat2 20s ease-in-out infinite;
+}
+
+.moving-orb-3 {
+  width: 420px;
+  height: 420px;
+  top: 50%;
+  left: 15%;
+  background: radial-gradient(circle, rgba(168, 85, 247, 0.45) 0%, rgba(147, 51, 234, 0) 70%);
+  animation: orbFloat3 24s ease-in-out infinite;
+}
+
+.moving-orb-4 {
+  width: 460px;
+  height: 460px;
+  top: 10%;
+  right: 20%;
+  background: radial-gradient(circle, rgba(14, 165, 233, 0.5) 0%, rgba(2, 132, 199, 0) 70%);
+  animation: orbFloat4 18s ease-in-out infinite;
+}
+
+.animated-grid-overlay {
+  position: absolute;
+  inset: 0;
+  background-image: 
+    linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-size: 44px 44px;
+  z-index: 1;
+  opacity: 0.7;
 }
 
 .login-card {
+  position: relative;
+  z-index: 10;
   background: rgba(15, 23, 42, 0.85);
   border: 1px solid rgba(255, 255, 255, 0.18);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
   border-radius: var(--radius-xl);
   padding: 44px 40px;
   width: 100%;
   max-width: 450px;
-  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.75), 0 0 30px rgba(59, 130, 246, 0.25);
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.85), 0 0 40px rgba(59, 130, 246, 0.3);
 }
 
 .login-header {

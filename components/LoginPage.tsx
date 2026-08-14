@@ -201,6 +201,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
 
   return (
     <div className="login-container">
+      {/* Moving Dynamic Ambient Background */}
+      <div className="login-bg-wallpaper" />
+      <div className="moving-orb moving-orb-1" />
+      <div className="moving-orb moving-orb-2" />
+      <div className="moving-orb moving-orb-3" />
+      <div className="moving-orb moving-orb-4" />
+      <div className="animated-grid-overlay" />
+
       <div className="login-card animate-fade-in">
         <div className="login-header">
           <div className="login-logo">
