@@ -1,23 +1,24 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Building2, 
   ArrowRight, 
   Eye, 
   EyeOff, 
   ShieldCheck, 
-  KeyRound, 
   UserPlus, 
   LogIn, 
   User, 
   Mail, 
-  Wallet,
-  CheckCircle2,
-  RefreshCw,
-  ArrowLeft
+  Wallet, 
+  CheckCircle2, 
+  RefreshCw, 
+  ArrowLeft,
+  Lock
 } from 'lucide-react';
 import { getStoredUsers, saveUserAccount, UserAccount } from '../lib/storage';
+import { syncSupabaseUser, isSupabaseConfigured } from '../lib/supabaseService';
 
 interface LoginPageProps {
   onLoginSuccess: (userName: string, initialBalance?: number) => void;
@@ -27,7 +28,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
   const [authMode, setAuthMode] = useState<'signin' | 'signup' | 'forgot'>('signin');
 
   // Sign In States
-  const [signInName, setSignInName] = useState('Aryan Shah');
+  const [signInName, setSignInName] = useState('');
   const [signInPasscode, setSignInPasscode] = useState('');
   const [showSignInPass, setShowSignInPass] = useState(false);
 
@@ -37,8 +38,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
   const [signUpBalance, setSignUpBalance] = useState('150000');
   const [signUpPasscode, setSignUpPasscode] = useState('');
   const [signUpConfirmPass, setSignUpConfirmPass] = useState('');
+  const [showSignUpPass, setShowSignUpPass] = useState(false);
 
-  // Reset Passcode States
+  // Reset Password States
   const [resetName, setResetName] = useState('');
   const [resetNewPass, setResetNewPass] = useState('');
   const [resetConfirmPass, setResetConfirmPass] = useState('');
@@ -47,37 +49,56 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
+  // Auto-fill recent user name if available
+  useEffect(() => {
+    const users = getStoredUsers();
+    if (users.length > 0) {
+      setSignInName(users[0].name);
+    } else {
+      // If first time visit, switch to Sign Up so user sets their own password
+      setAuthMode('signup');
+    }
+  }, []);
+
   const handleSignInSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
+    setSuccessMsg('');
+
+    if (!signInName.trim()) {
+      setError('Please enter your account name or email.');
+      return;
+    }
+
     if (!signInPasscode.trim()) {
-      setError('Please enter your access passcode');
+      setError('Please enter your personal password.');
       return;
     }
 
     const registeredUsers = getStoredUsers();
+
+    if (registeredUsers.length === 0) {
+      setError('No account exists yet. Please switch to the Sign Up tab to create your account and set your own password.');
+      return;
+    }
+
     const matchingUser = registeredUsers.find(
       u => u.name.toLowerCase() === signInName.trim().toLowerCase() ||
            u.email.toLowerCase() === signInName.trim().toLowerCase()
     );
 
-    if (matchingUser) {
-      if (matchingUser.passcode === signInPasscode.trim()) {
-        setError('');
-        onLoginSuccess(matchingUser.name, matchingUser.initialBalance);
-        return;
-      } else {
-        setError('Incorrect passcode for this account.');
-        return;
-      }
+    if (!matchingUser) {
+      setError('Account not found with this name/email. Please verify your spelling or click Sign Up to create one.');
+      return;
     }
 
-    // Default fallback access (ambika123 or any 4+ char PIN)
-    if (signInPasscode.trim().toLowerCase() === 'ambika123' || signInPasscode.length >= 4) {
-      setError('');
-      onLoginSuccess(signInName.trim() || 'Aryan Shah');
-    } else {
-      setError('Invalid passcode. Minimum 4 characters required (Default: ambika123)');
+    if (matchingUser.passcode !== signInPasscode.trim()) {
+      setError('Incorrect password for this account. Please try again or click "Forgot Password?".');
+      return;
     }
+
+    setError('');
+    onLoginSuccess(matchingUser.name, matchingUser.initialBalance);
   };
 
   const handleSignUpSubmit = (e: React.FormEvent) => {
@@ -86,17 +107,17 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
     setSuccessMsg('');
 
     if (!signUpName.trim()) {
-      setError('Please enter your full name');
+      setError('Please enter your full name.');
       return;
     }
 
     if (!signUpPasscode.trim() || signUpPasscode.length < 4) {
-      setError('Passcode must be at least 4 characters long');
+      setError('Password must be at least 4 characters long.');
       return;
     }
 
     if (signUpPasscode !== signUpConfirmPass) {
-      setError('Passcodes do not match. Please check again.');
+      setError('Passwords do not match. Please verify both fields.');
       return;
     }
 
@@ -110,11 +131,16 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
     };
 
     saveUserAccount(newUser);
-    setSuccessMsg('Account created successfully! Logging you in...');
+
+    if (isSupabaseConfigured) {
+      syncSupabaseUser(newUser);
+    }
+
+    setSuccessMsg('Account created successfully! Logging you into Ambika Accounting...');
 
     setTimeout(() => {
       onLoginSuccess(newUser.name, newUser.initialBalance);
-    }, 800);
+    }, 600);
   };
 
   const handleResetSubmit = (e: React.FormEvent) => {
@@ -123,17 +149,17 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
     setSuccessMsg('');
 
     if (!resetName.trim()) {
-      setError('Please enter your account name or email');
+      setError('Please enter your registered account name or email.');
       return;
     }
 
     if (!resetNewPass.trim() || resetNewPass.length < 4) {
-      setError('New passcode must be at least 4 characters long');
+      setError('New password must be at least 4 characters long.');
       return;
     }
 
     if (resetNewPass !== resetConfirmPass) {
-      setError('New passcodes do not match. Please try again.');
+      setError('New passwords do not match. Please try again.');
       return;
     }
 
@@ -146,29 +172,31 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
     if (matchingUser) {
       matchingUser.passcode = resetNewPass.trim();
       saveUserAccount(matchingUser);
+
+      if (isSupabaseConfigured) {
+        syncSupabaseUser(matchingUser);
+      }
     } else {
-      // Register or update fallback user
-      const updatedUser: UserAccount = {
+      const newUser: UserAccount = {
         name: resetName.trim(),
         email: `${resetName.toLowerCase().replace(/\s+/g, '')}@ambika.acc`,
         passcode: resetNewPass.trim(),
         initialBalance: 150000,
       };
-      saveUserAccount(updatedUser);
+      saveUserAccount(newUser);
+
+      if (isSupabaseConfigured) {
+        syncSupabaseUser(newUser);
+      }
     }
 
-    setSuccessMsg('Passcode reset successfully! Please sign in with your new passcode.');
+    setSuccessMsg('Password updated successfully! Please sign in with your new password.');
     setSignInName(resetName.trim());
     setSignInPasscode(resetNewPass.trim());
 
     setTimeout(() => {
       setAuthMode('signin');
-      setSuccessMsg('Passcode reset completed!');
-    }, 1200);
-  };
-
-  const handleQuickDemoAccess = () => {
-    onLoginSuccess('Aryan Shah', 150000);
+    }, 1000);
   };
 
   return (
@@ -287,10 +315,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                 <input
                   type="text"
                   className="input-field input-field-normal"
-                  placeholder="e.g. Aryan Shah"
+                  placeholder="Enter your name or email"
                   value={signInName}
                   onChange={(e) => setSignInName(e.target.value)}
                   style={{ paddingLeft: '40px' }}
+                  required
                 />
                 <User size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dim)' }} />
               </div>
@@ -298,7 +327,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
 
             <div className="form-group">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <label className="form-label">Access Passcode *</label>
+                <label className="form-label">Your Password *</label>
                 <button
                   type="button"
                   onClick={() => {
@@ -316,7 +345,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                     cursor: 'pointer'
                   }}
                 >
-                  Forgot Passcode?
+                  Forgot Password?
                 </button>
               </div>
 
@@ -324,12 +353,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                 <input
                   type={showSignInPass ? 'text' : 'password'}
                   className="input-field input-field-normal"
-                  placeholder="Enter passcode (e.g. ambika123)"
+                  placeholder="Enter your password"
                   value={signInPasscode}
                   onChange={(e) => setSignInPasscode(e.target.value)}
-                  style={{ paddingRight: '40px' }}
-                  autoFocus
+                  style={{ paddingLeft: '40px', paddingRight: '40px' }}
+                  required
                 />
+                <Lock size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dim)' }} />
                 <button
                   type="button"
                   onClick={() => setShowSignInPass(!showSignInPass)}
@@ -347,29 +377,16 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                   {showSignInPass ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                Default Passcode: <strong style={{ color: 'var(--accent-blue)' }}>ambika123</strong>
-              </span>
             </div>
 
             <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '12px', marginTop: '4px' }}>
               <span>Sign In to Account</span>
               <ArrowRight size={18} />
             </button>
-
-            <button 
-              type="button" 
-              className="btn btn-secondary" 
-              onClick={handleQuickDemoAccess}
-              style={{ width: '100%', padding: '10px', fontSize: '0.85rem' }}
-            >
-              <KeyRound size={16} />
-              <span>Quick 1-Click Login</span>
-            </button>
           </form>
         )}
 
-        {/* SIGN UP FORM */}
+        {/* SIGN UP FORM (CHOOSE YOUR OWN PASSWORD) */}
         {authMode === 'signup' && (
           <form onSubmit={handleSignUpSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div className="form-group">
@@ -420,23 +437,42 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
 
             <div className="form-row">
               <div className="form-group">
-                <label className="form-label">Passcode *</label>
-                <input
-                  type={showSignInPass ? 'text' : 'password'}
-                  className="input-field input-field-normal"
-                  placeholder="Min 4 chars"
-                  value={signUpPasscode}
-                  onChange={(e) => setSignUpPasscode(e.target.value)}
-                  required
-                />
+                <label className="form-label">Choose Password *</label>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type={showSignUpPass ? 'text' : 'password'}
+                    className="input-field input-field-normal"
+                    placeholder="Min 4 chars"
+                    value={signUpPasscode}
+                    onChange={(e) => setSignUpPasscode(e.target.value)}
+                    style={{ paddingRight: '36px' }}
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowSignUpPass(!showSignUpPass)}
+                    style={{
+                      position: 'absolute',
+                      right: '10px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: 'none',
+                      border: 'none',
+                      color: 'var(--text-dim)',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {showSignUpPass ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
               </div>
 
               <div className="form-group">
-                <label className="form-label">Confirm Passcode *</label>
+                <label className="form-label">Confirm Password *</label>
                 <input
-                  type={showSignInPass ? 'text' : 'password'}
+                  type={showSignUpPass ? 'text' : 'password'}
                   className="input-field input-field-normal"
-                  placeholder="Re-enter"
+                  placeholder="Re-enter password"
                   value={signUpConfirmPass}
                   onChange={(e) => setSignUpConfirmPass(e.target.value)}
                   required
@@ -446,12 +482,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
 
             <button type="submit" className="btn btn-emerald" style={{ width: '100%', padding: '12px', marginTop: '6px' }}>
               <UserPlus size={18} />
-              <span>Create Ambika Account</span>
+              <span>Create Account & Set Password</span>
             </button>
           </form>
         )}
 
-        {/* FORGOT / RESET PASSCODE FORM */}
+        {/* FORGOT / RESET PASSWORD FORM */}
         {authMode === 'forgot' && (
           <form onSubmit={handleResetSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={{
@@ -461,7 +497,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
               marginBottom: '4px'
             }}>
               <div style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--text-main)' }}>
-                Reset Access Passcode
+                Reset Your Password
               </div>
               <button
                 type="button"
@@ -503,12 +539,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
             </div>
 
             <div className="form-group">
-              <label className="form-label">New Passcode *</label>
+              <label className="form-label">Choose New Password *</label>
               <div style={{ position: 'relative' }}>
                 <input
                   type={showResetPass ? 'text' : 'password'}
                   className="input-field input-field-normal"
-                  placeholder="Enter new passcode (min 4 chars)"
+                  placeholder="Enter new password (min 4 chars)"
                   value={resetNewPass}
                   onChange={(e) => setResetNewPass(e.target.value)}
                   style={{ paddingRight: '40px' }}
@@ -534,11 +570,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
             </div>
 
             <div className="form-group">
-              <label className="form-label">Confirm New Passcode *</label>
+              <label className="form-label">Confirm New Password *</label>
               <input
                 type={showResetPass ? 'text' : 'password'}
                 className="input-field input-field-normal"
-                placeholder="Re-enter new passcode"
+                placeholder="Re-enter new password"
                 value={resetConfirmPass}
                 onChange={(e) => setResetConfirmPass(e.target.value)}
                 required
@@ -547,7 +583,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
 
             <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '12px', marginTop: '6px' }}>
               <RefreshCw size={18} />
-              <span>Reset Passcode & Save</span>
+              <span>Save New Password</span>
             </button>
           </form>
         )}
@@ -563,7 +599,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
           color: 'var(--text-muted)'
         }}>
           <ShieldCheck size={16} color="var(--accent-emerald)" />
-          <span>Local Encrypted Personal Accounting Session</span>
+          <span>Secure Personal Password Authentication</span>
         </div>
       </div>
     </div>
