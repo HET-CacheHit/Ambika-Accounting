@@ -6,8 +6,11 @@ import {
   FileSpreadsheet, 
   Settings, 
   LogOut,
+  Cloud,
+  CloudOff
 } from 'lucide-react';
 import { AccountSettings } from '../lib/types';
+import { isSupabaseConfigured } from '../lib/supabaseClient';
 
 interface NavbarProps {
   settings: AccountSettings;
@@ -41,6 +44,26 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
 
         <div className="nav-actions">
+          {/* Cloud Sync Status Indicator */}
+          <div 
+            title={isSupabaseConfigured ? "Connected & Synced with Supabase Cloud DB" : "Running in Local Storage Mode (.env.local not yet configured)"}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 12px',
+              borderRadius: '999px',
+              background: isSupabaseConfigured ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255, 255, 255, 0.06)',
+              border: isSupabaseConfigured ? '1px solid rgba(16, 185, 129, 0.35)' : '1px solid rgba(255, 255, 255, 0.1)',
+              color: isSupabaseConfigured ? '#34d399' : 'var(--text-muted)',
+              fontSize: '0.75rem',
+              fontWeight: 700
+            }}
+          >
+            {isSupabaseConfigured ? <Cloud size={14} color="#34d399" /> : <CloudOff size={14} color="var(--text-dim)" />}
+            <span>{isSupabaseConfigured ? 'Supabase Connected' : 'Local Storage'}</span>
+          </div>
+
           <button 
             className="btn btn-emerald" 
             onClick={onExportDocx} 
