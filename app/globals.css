@@ -1036,3 +1036,274 @@ html, body {
   font-size: 0.875rem;
   color: var(--text-muted);
 }
+
+/* ==============================================================================
+   COMPREHENSIVE MOBILE & TABLET RESPONSIVE STYLING
+   ============================================================================== */
+
+/* Tablets and small laptops (max-width: 900px) */
+@media (max-width: 900px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .summary-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+  }
+}
+
+/* Mobile Devices (max-width: 768px) */
+@media (max-width: 768px) {
+  .app-container {
+    padding: 0 12px 30px 12px;
+  }
+
+  .navbar {
+    padding: 10px 12px;
+    margin-bottom: 16px;
+  }
+
+  .navbar-inner {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .brand-logo {
+    gap: 10px;
+  }
+
+  .brand-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+  }
+
+  .brand-icon svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .brand-text-gradient {
+    font-size: 1.15rem;
+  }
+
+  .brand-subtitle {
+    font-size: 0.725rem;
+  }
+
+  .badge-count-desktop {
+    display: none;
+  }
+
+  .nav-actions {
+    gap: 6px;
+  }
+
+  .nav-export-btn {
+    padding: 7px 12px;
+    font-size: 0.8rem;
+  }
+
+  .cloud-status-badge {
+    padding: 4px 8px !important;
+  }
+
+  .cloud-status-text {
+    display: none;
+  }
+
+  /* Summary cards on mobile */
+  .summary-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+
+  .summary-card {
+    padding: 16px 14px;
+    border-radius: var(--radius-md);
+  }
+
+  .card-header .card-title {
+    font-size: 0.75rem;
+  }
+
+  .card-value {
+    font-size: 1.35rem;
+    margin: 8px 0 4px 0;
+  }
+
+  .card-subtext {
+    font-size: 0.7rem;
+  }
+
+  /* Moving Headline */
+  .moving-headline-container {
+    margin-bottom: 16px;
+    padding: 8px 12px;
+  }
+
+  .headline-tag {
+    font-size: 0.7rem;
+    padding: 3px 8px;
+  }
+
+  /* Section Header */
+  .section-header {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+
+  .section-title {
+    font-size: 1.1rem;
+  }
+
+  /* Toolbar */
+  .toolbar-card {
+    padding: 14px;
+    margin-bottom: 16px;
+  }
+
+  .filter-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .search-input-wrapper {
+    width: 100%;
+    min-width: 100%;
+  }
+
+  .select-field {
+    width: 100%;
+  }
+
+  /* Expense Card */
+  .expense-card {
+    padding: 14px 12px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .expense-info {
+    width: 100%;
+    gap: 10px;
+  }
+
+  .category-icon-box {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    flex-shrink: 0;
+  }
+
+  .category-icon-box svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .expense-title {
+    font-size: 0.95rem;
+  }
+
+  .expense-amount-block {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .expense-amount {
+    font-size: 1.15rem;
+  }
+
+  /* Modal Sheets on Mobile */
+  .modal-overlay {
+    padding: 12px;
+    align-items: flex-end;
+  }
+
+  .modal-card {
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: 90vh;
+    border-radius: 20px 20px 12px 12px;
+    padding: 0;
+  }
+
+  .modal-header {
+    padding: 16px 18px;
+  }
+
+  .modal-body {
+    padding: 16px 18px 24px 18px;
+    max-height: calc(90vh - 70px);
+    overflow-y: auto;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  /* Login Card on Mobile */
+  .login-container {
+    padding: 12px;
+  }
+
+  .login-card {
+    padding: 28px 18px;
+    border-radius: 20px;
+    max-width: 100%;
+  }
+
+  .login-header {
+    margin-bottom: 24px;
+  }
+
+  .login-logo {
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+    margin-bottom: 14px;
+  }
+
+  .brand-text-login {
+    font-size: 1.6rem;
+  }
+}
+
+/* Extra Small Phones (max-width: 480px) */
+@media (max-width: 480px) {
+  .summary-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .navbar-inner {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .nav-actions {
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .btn-text-responsive {
+    display: inline;
+  }
+
+  .input-field,
+  .select-field {
+    font-size: 16px; /* Prevents auto-zoom on iOS */
+  }
+}

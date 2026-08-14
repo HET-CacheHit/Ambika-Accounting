@@ -37,7 +37,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span className="brand-text-gradient">Ambika Accounting</span>
-              <span className="badge-count" style={{ fontSize: '0.7rem' }}>Personal Ledger</span>
+              <span className="badge-count badge-count-desktop" style={{ fontSize: '0.7rem' }}>Personal Ledger</span>
             </div>
             <div className="brand-subtitle">{settings.userName} &bull; {settings.accountName}</div>
           </div>
@@ -46,7 +46,8 @@ export const Navbar: React.FC<NavbarProps> = ({
         <div className="nav-actions">
           {/* Cloud Sync Status Indicator */}
           <div 
-            title={isSupabaseConfigured ? "Connected & Synced with Supabase Cloud DB" : "Running in Local Storage Mode (.env.local not yet configured)"}
+            className="cloud-status-badge"
+            title={isSupabaseConfigured ? "Connected & Synced with Supabase Cloud DB" : "Running in Local Storage Mode"}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -61,23 +62,24 @@ export const Navbar: React.FC<NavbarProps> = ({
             }}
           >
             {isSupabaseConfigured ? <Cloud size={14} color="#34d399" /> : <CloudOff size={14} color="var(--text-dim)" />}
-            <span>{isSupabaseConfigured ? 'Supabase Connected' : 'Local Storage'}</span>
+            <span className="cloud-status-text">{isSupabaseConfigured ? 'Supabase' : 'Local'}</span>
           </div>
 
           <button 
-            className="btn btn-emerald" 
+            className="btn btn-emerald nav-export-btn" 
             onClick={onExportDocx} 
             disabled={isExportingDocx}
             title="Generate automated Word document (.docx) with attached bill screenshots"
           >
             <FileSpreadsheet size={18} />
-            <span>{isExportingDocx ? 'Generating Word...' : 'Export Word (.docx)'}</span>
+            <span className="btn-text-responsive">{isExportingDocx ? 'Exporting...' : 'Export Word'}</span>
           </button>
 
           <button 
             className="btn btn-secondary btn-icon" 
             onClick={onOpenSettings}
             title="Account & Balance Settings"
+            aria-label="Account Settings"
           >
             <Settings size={18} />
           </button>
@@ -86,6 +88,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             className="btn btn-danger btn-icon" 
             onClick={onLogout}
             title="Lock / Logout"
+            aria-label="Logout"
           >
             <LogOut size={18} />
           </button>
