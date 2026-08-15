@@ -15,114 +15,114 @@ export const DEFAULT_SETTINGS: AccountSettings = {
   accountName: 'Ambika Personal Account',
 };
 
-export const INITIAL_EXPENSES: Expense[] = [
-  {
-    id: 'exp-101',
-    title: 'Office Stationary & Printing Paper',
-    amount: 1450,
-    category: 'Business Expenses',
-    paymentMethod: 'UPI / GPay / PhonePe',
-    date: new Date(Date.now() - 86400000 * 1).toISOString().split('T')[0],
-    notes: 'Bought A4 rim paper bundle and file binders for Ambika Accounting physical logs.',
-    createdAt: Date.now() - 86400000 * 1,
-  },
-  {
-    id: 'exp-102',
-    title: 'Monthly Broadband Fiber Internet',
-    amount: 999,
-    category: 'Bills & Utilities',
-    paymentMethod: 'Credit Card',
-    date: new Date(Date.now() - 86400000 * 3).toISOString().split('T')[0],
-    notes: 'Airtel Xstream Fiber bill payment.',
-    createdAt: Date.now() - 86400000 * 3,
-  },
-  {
-    id: 'exp-103',
-    title: 'Grocery Store Supermarket Bill',
-    amount: 4320,
-    category: 'Groceries',
-    paymentMethod: 'UPI / GPay / PhonePe',
-    date: new Date(Date.now() - 86400000 * 5).toISOString().split('T')[0],
-    notes: 'Monthly pulses, dry fruits, organic oil and home provisions.',
-    createdAt: Date.now() - 86400000 * 5,
-  },
-  {
-    id: 'exp-104',
-    title: 'Vehicle Fuel Fill (Petrol)',
-    amount: 2500,
-    category: 'Transport & Fuel',
-    paymentMethod: 'Debit Card',
-    date: new Date(Date.now() - 86400000 * 8).toISOString().split('T')[0],
-    notes: 'Full tank at HP Petrol Pump.',
-    createdAt: Date.now() - 86400000 * 8,
-  },
-  {
-    id: 'exp-105',
-    title: 'Electricity & Power Utilities',
-    amount: 3850,
-    category: 'Bills & Utilities',
-    paymentMethod: 'Net Banking',
-    date: new Date(Date.now() - 86400000 * 12).toISOString().split('T')[0],
-    notes: 'Torrent Power monthly electricity statement.',
-    createdAt: Date.now() - 86400000 * 12,
-  }
-];
-
 const STORAGE_KEYS = {
-  EXPENSES: 'ambika_accounting_expenses',
-  SETTINGS: 'ambika_accounting_settings',
+  CURRENT_USER: 'ambika_current_user_key',
   AUTH: 'ambika_accounting_auth',
   USERS: 'ambika_accounting_users',
+  EXPENSES_PREFIX: 'ambika_expenses_',
+  SETTINGS_PREFIX: 'ambika_settings_',
 };
 
-export function getStoredExpenses(): Expense[] {
-  if (typeof window === 'undefined') return INITIAL_EXPENSES;
-  try {
-    const raw = localStorage.getItem(STORAGE_KEYS.EXPENSES);
-    if (!raw) {
-      localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(INITIAL_EXPENSES));
-      return INITIAL_EXPENSES;
-    }
-    return JSON.parse(raw);
-  } catch (e) {
-    console.error('Failed to load expenses from localStorage', e);
-    return INITIAL_EXPENSES;
-  }
+/**
+ * Normalizes a user identifier (email or name) into a safe storage key.
+ */
+export function normalizeUserKey(identifier?: string): string {
+  if (!identifier) return 'default_user';
+  return identifier.trim().toLowerCase().replace(/[^a-z0-9@._-]/g, '_');
 }
 
-export function saveExpenses(expenses: Expense[]): void {
+/**
+ * Gets the current logged in user's key.
+ */
+export function getCurrentUserKey(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
+}
+
+/**
+ * Sets or clears the current logged in user's key.
+ */
+export function saveCurrentUserKey(userKey: string | null): void {
   if (typeof window === 'undefined') return;
-  try {
-    localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(expenses));
-  } catch (e) {
-    console.error('Failed to save expenses to localStorage', e);
+  if (userKey) {
+    localStorage.setItem(STORAGE_KEYS.CURRENT_USER, normalizeUserKey(userKey));
+  } else {
+    localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
   }
 }
 
-export function getStoredSettings(): AccountSettings {
-  if (typeof window === 'undefined') return DEFAULT_SETTINGS;
+/**
+ * Returns expenses strictly isolated for the specified user account.
+ */
+export function getStoredExpenses(userKey?: string): Expense[] {
+  if (typeof window === 'undefined') return [];
+  const key = normalizeUserKey(userKey || getCurrentUserKey() || 'default_user');
   try {
-    const raw = localStorage.getItem(STORAGE_KEYS.SETTINGS);
+    const raw = localStorage.getItem(`${STORAGE_KEYS.EXPENSES_PREFIX}${key}`);
     if (!raw) {
-      localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(DEFAULT_SETTINGS));
-      return DEFAULT_SETTINGS;
+      return [];
     }
     return JSON.parse(raw);
   } catch (e) {
-    console.error('Failed to load settings from localStorage', e);
+    console.error('Failed to load expenses for user ' + key, e);
+    return [];
+  }
+}
+
+/**
+ * Saves expenses strictly isolated for the specified user account.
+ */
+export function saveExpenses(expenses: Expense[], userKey?: string): void {
+  if (typeof window === 'undefined') return;
+  const key = normalizeUserKey(userKey || getCurrentUserKey() || 'default_user');
+  try {
+    localStorage.setItem(`${STORAGE_KEYS.EXPENSES_PREFIX}${key}`, JSON.stringify(expenses));
+  } catch (e) {
+    console.error('Failed to save expenses for user ' + key, e);
+  }
+}
+
+/**
+ * Returns account settings strictly isolated for the specified user account.
+ */
+export function getStoredSettings(userKey?: string, defaultName?: string, defaultBalance?: number): AccountSettings {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS;
+  const key = normalizeUserKey(userKey || getCurrentUserKey() || 'default_user');
+  try {
+    const raw = localStorage.getItem(`${STORAGE_KEYS.SETTINGS_PREFIX}${key}`);
+    if (!raw) {
+      const initial: AccountSettings = {
+        ...DEFAULT_SETTINGS,
+        userName: defaultName || (userKey ? userKey.split('@')[0] : DEFAULT_SETTINGS.userName),
+        initialBalance: defaultBalance !== undefined ? defaultBalance : DEFAULT_SETTINGS.initialBalance,
+        accountName: `${defaultName || 'Ambika'} Personal Account`,
+      };
+      localStorage.setItem(`${STORAGE_KEYS.SETTINGS_PREFIX}${key}`, JSON.stringify(initial));
+      return initial;
+    }
+    return JSON.parse(raw);
+  } catch (e) {
+    console.error('Failed to load settings for user ' + key, e);
     return DEFAULT_SETTINGS;
   }
 }
 
-export function saveSettings(settings: AccountSettings): void {
+/**
+ * Saves account settings strictly isolated for the specified user account.
+ */
+export function saveSettings(settings: AccountSettings, userKey?: string): void {
   if (typeof window === 'undefined') return;
+  const key = normalizeUserKey(userKey || getCurrentUserKey() || settings.userName || 'default_user');
   try {
-    localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
+    localStorage.setItem(`${STORAGE_KEYS.SETTINGS_PREFIX}${key}`, JSON.stringify(settings));
   } catch (e) {
-    console.error('Failed to save settings to localStorage', e);
+    console.error('Failed to save settings for user ' + key, e);
   }
 }
 
+/**
+ * List of registered users on the device.
+ */
 export function getStoredUsers(): UserAccount[] {
   if (typeof window === 'undefined') return [];
   try {
@@ -133,11 +133,17 @@ export function getStoredUsers(): UserAccount[] {
   }
 }
 
+/**
+ * Saves a registered user account.
+ */
 export function saveUserAccount(user: UserAccount): void {
   if (typeof window === 'undefined') return;
   try {
     const users = getStoredUsers();
-    const existingIdx = users.findIndex(u => u.email.toLowerCase() === user.email.toLowerCase());
+    const existingIdx = users.findIndex(
+      u => u.email.toLowerCase() === user.email.toLowerCase() ||
+           u.name.toLowerCase() === user.name.toLowerCase()
+    );
     if (existingIdx >= 0) {
       users[existingIdx] = user;
     } else {
@@ -151,14 +157,18 @@ export function saveUserAccount(user: UserAccount): void {
 
 export function getStoredAuth(): boolean {
   if (typeof window === 'undefined') return false;
-  return localStorage.getItem(STORAGE_KEYS.AUTH) === 'true';
+  return localStorage.getItem(STORAGE_KEYS.AUTH) === 'true' && Boolean(getCurrentUserKey());
 }
 
-export function saveAuth(isAuthenticated: boolean): void {
+export function saveAuth(isAuthenticated: boolean, userKey?: string): void {
   if (typeof window === 'undefined') return;
   if (isAuthenticated) {
     localStorage.setItem(STORAGE_KEYS.AUTH, 'true');
+    if (userKey) {
+      saveCurrentUserKey(userKey);
+    }
   } else {
     localStorage.removeItem(STORAGE_KEYS.AUTH);
+    saveCurrentUserKey(null);
   }
 }

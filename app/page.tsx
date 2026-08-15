@@ -7,7 +7,9 @@ import {
   getStoredSettings, 
   saveSettings, 
   getStoredAuth, 
-  saveAuth 
+  saveAuth,
+  getCurrentUserKey,
+  normalizeUserKey
 } from '../lib/storage';
 import { Expense, AccountSettings } from '../lib/types';
 import { generateExpenseWordDocument } from '../lib/docxGenerator';
@@ -34,6 +36,7 @@ import { GhostWarningModal } from '../components/GhostWarningModal';
 export default function AmbikaAccountingApp() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isLoaded, setIsLoaded] = useState<boolean>(false);
+  const [currentUserKey, setCurrentUserKey] = useState<string | null>(null);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [settings, setSettings] = useState<AccountSettings>(getStoredSettings());
 
@@ -50,88 +53,103 @@ export default function AmbikaAccountingApp() {
   // Initialize data on client load & sync with Supabase if configured
   useEffect(() => {
     const isAuth = getStoredAuth();
-    const localExpenses = getStoredExpenses();
-    const localSettings = getStoredSettings();
+    const activeKey = getCurrentUserKey();
 
     setIsAuthenticated(isAuth);
-    setExpenses(localExpenses);
-    setSettings(localSettings);
-    setIsLoaded(true);
+    setCurrentUserKey(activeKey);
 
-    // If Supabase is connected, sync remote cloud data
-    if (isSupabaseConfigured && isAuth) {
-      const userId = localSettings.userName || 'user';
-      
-      fetchSupabaseExpenses(userId).then((cloudExpenses) => {
-        if (cloudExpenses && cloudExpenses.length > 0) {
-          setExpenses(cloudExpenses);
-          saveExpenses(cloudExpenses);
-        } else if (localExpenses.length > 0) {
-          // Push initial local expenses to Supabase
-          localExpenses.forEach((exp) => insertSupabaseExpense(exp, userId));
-        }
-      });
+    if (isAuth && activeKey) {
+      const userExpenses = getStoredExpenses(activeKey);
+      const userSettings = getStoredSettings(activeKey);
+      setExpenses(userExpenses);
+      setSettings(userSettings);
 
-      fetchSupabaseSettings(userId).then((cloudSettings) => {
-        if (cloudSettings) {
-          setSettings(cloudSettings);
-          saveSettings(cloudSettings);
-        } else {
-          saveSupabaseSettings(localSettings, userId);
-        }
-      });
+      // If Supabase is connected, sync remote cloud data for this specific user
+      if (isSupabaseConfigured) {
+        fetchSupabaseExpenses(activeKey).then((cloudExpenses) => {
+          if (cloudExpenses && cloudExpenses.length > 0) {
+            setExpenses(cloudExpenses);
+            saveExpenses(cloudExpenses, activeKey);
+          } else if (userExpenses.length > 0) {
+            userExpenses.forEach((exp) => insertSupabaseExpense(exp, activeKey));
+          }
+        });
+
+        fetchSupabaseSettings(activeKey).then((cloudSettings) => {
+          if (cloudSettings) {
+            setSettings(cloudSettings);
+            saveSettings(cloudSettings, activeKey);
+          } else {
+            saveSupabaseSettings(userSettings, activeKey);
+          }
+        });
+      }
     }
+
+    setIsLoaded(true);
   }, []);
 
-  // Sync expenses to localStorage & Supabase
+  // Sync expenses strictly for the logged-in user
   const updateExpenses = (newExpenses: Expense[]) => {
+    const userKey = currentUserKey || settings.userName || 'default_user';
     setExpenses(newExpenses);
-    saveExpenses(newExpenses);
+    saveExpenses(newExpenses, userKey);
   };
 
-  // Sync settings to localStorage & Supabase
+  // Sync settings strictly for the logged-in user
   const updateSettings = (newSettings: AccountSettings) => {
+    const userKey = currentUserKey || settings.userName || 'default_user';
     setSettings(newSettings);
-    saveSettings(newSettings);
+    saveSettings(newSettings, userKey);
 
     if (isSupabaseConfigured) {
-      saveSupabaseSettings(newSettings, newSettings.userName || 'user');
+      saveSupabaseSettings(newSettings, userKey);
     }
 
     showToast('Profile & Account Balance updated successfully!');
   };
 
-  const handleLoginSuccess = async (userName?: string, customInitialBalance?: number) => {
-    saveAuth(true);
+  const handleLoginSuccess = async (userName: string, customInitialBalance?: number, userEmail?: string) => {
+    const userKey = normalizeUserKey(userEmail || userName);
+    saveAuth(true, userKey);
+    setCurrentUserKey(userKey);
     setIsAuthenticated(true);
-    const resolvedName = userName || settings.userName;
 
-    const updatedSettings = {
-      ...settings,
-      userName: resolvedName,
-      initialBalance: customInitialBalance !== undefined ? customInitialBalance : settings.initialBalance,
-    };
+    const userSettings = getStoredSettings(userKey, userName, customInitialBalance);
+    const userExpenses = getStoredExpenses(userKey);
 
-    updateSettings(updatedSettings);
+    setSettings(userSettings);
+    setExpenses(userExpenses);
 
     // Sync cloud data for logged in user
     if (isSupabaseConfigured) {
-      const cloudExpenses = await fetchSupabaseExpenses(resolvedName);
+      const cloudExpenses = await fetchSupabaseExpenses(userKey);
       if (cloudExpenses && cloudExpenses.length > 0) {
         setExpenses(cloudExpenses);
-        saveExpenses(cloudExpenses);
+        saveExpenses(cloudExpenses, userKey);
       }
-      showToast(`Welcome back, ${resolvedName}! Connected to Supabase.`);
+
+      const cloudSettings = await fetchSupabaseSettings(userKey);
+      if (cloudSettings) {
+        setSettings(cloudSettings);
+        saveSettings(cloudSettings, userKey);
+      }
+
+      showToast(`Welcome back, ${userName}! Connected to your private account.`);
+    } else {
+      showToast(`Logged into account: ${userName}`);
     }
   };
 
   const handleLogout = () => {
     saveAuth(false);
+    setCurrentUserKey(null);
     setIsAuthenticated(false);
+    setExpenses([]);
   };
 
   const handleAddExpense = async (expenseData: Omit<Expense, 'id' | 'createdAt'> & { id?: string }) => {
-    const userId = settings.userName || 'user';
+    const userKey = currentUserKey || settings.userName || 'default_user';
 
     if (expenseData.id) {
       // Editing existing expense
@@ -143,7 +161,7 @@ export default function AmbikaAccountingApp() {
 
       const targetExpense = updated.find(e => e.id === expenseData.id);
       if (targetExpense && isSupabaseConfigured) {
-        insertSupabaseExpense(targetExpense, userId);
+        insertSupabaseExpense(targetExpense, userKey);
       }
 
       showToast(`Updated expense: "${expenseData.title}"`);
@@ -157,7 +175,7 @@ export default function AmbikaAccountingApp() {
       updateExpenses([newExpense, ...expenses]);
 
       if (isSupabaseConfigured) {
-        insertSupabaseExpense(newExpense, userId);
+        insertSupabaseExpense(newExpense, userKey);
       }
 
       showToast(`Added new expense: "${expenseData.title}" (-${settings.currencySymbol}${expenseData.amount})`);
@@ -165,6 +183,7 @@ export default function AmbikaAccountingApp() {
   };
 
   const handleDeleteExpense = async (id: string) => {
+    const userKey = currentUserKey || settings.userName || 'default_user';
     const target = expenses.find(e => e.id === id);
     if (confirm(`Are you sure you want to delete "${target?.title || 'this expense'}"?`)) {
       const updated = expenses.filter(e => e.id !== id);
@@ -181,7 +200,7 @@ export default function AmbikaAccountingApp() {
   // Automated Word Document (.docx) Export with Bill Screenshots
   const handleExportDocx = async () => {
     if (expenses.length === 0) {
-      alert('No expenses found to export.');
+      alert('No expenses found in this account to export.');
       return;
     }
 
@@ -189,9 +208,9 @@ export default function AmbikaAccountingApp() {
       setIsExportingDocx(true);
       showToast('Generating automated Word document with bill screenshots...');
 
-      const blob = await generateExpenseWordDocument(expenses, settings, 'All Ledger Entries');
+      const blob = await generateExpenseWordDocument(expenses, settings, `${settings.userName} Ledger Statement`);
       
-      const fileName = `Ambika_Accounting_Statement_${new Date().toISOString().split('T')[0]}.docx`;
+      const fileName = `Ambika_${settings.userName.replace(/\s+/g, '_')}_Statement_${new Date().toISOString().split('T')[0]}.docx`;
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;

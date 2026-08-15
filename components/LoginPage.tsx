@@ -21,7 +21,7 @@ import { getStoredUsers, saveUserAccount, UserAccount } from '../lib/storage';
 import { syncSupabaseUser, isSupabaseConfigured } from '../lib/supabaseService';
 
 interface LoginPageProps {
-  onLoginSuccess: (userName: string, initialBalance?: number) => void;
+  onLoginSuccess: (userName: string, initialBalance?: number, userEmail?: string) => void;
 }
 
 export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
@@ -98,7 +98,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
     }
 
     setError('');
-    onLoginSuccess(matchingUser.name, matchingUser.initialBalance);
+    onLoginSuccess(matchingUser.name, matchingUser.initialBalance, matchingUser.email);
   };
 
   const handleSignUpSubmit = (e: React.FormEvent) => {
@@ -139,7 +139,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
     setSuccessMsg('Account created successfully! Logging you into Ambika Accounting...');
 
     setTimeout(() => {
-      onLoginSuccess(newUser.name, newUser.initialBalance);
+      onLoginSuccess(newUser.name, newUser.initialBalance, newUser.email);
     }, 600);
   };
 
